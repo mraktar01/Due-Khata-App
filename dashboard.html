@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Due-Khata | Premium Ledger</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="icon" type="image/png" href="./favcion.png">
+
+    <link rel="apple-touch-icon" href="./favcion.png">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Due-Khata">
+    <meta name="theme-color" content="#09090b">
+
+
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #09090b; color: #fafafa; }
+        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(39, 39, 42, 1); }
+        .gradient-text { background: linear-gradient(to right, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="antialiased pb-24">
+
+    <nav class="sticky top-0 z-50 glass px-6 py-4 flex justify-between items-center mb-8">
+        <h1 class="text-xl font-bold gradient-text">Due-Khata.</h1>
+        <button onclick="logout()" class="text-sm text-zinc-400 hover:text-rose-500 transition-colors">Logout</button>
+    </nav>
+
+    <main class="max-w-2xl mx-auto px-4">
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="glass p-6 rounded-3xl">
+                <p class="text-xs text-zinc-500 uppercase tracking-widest font-bold mb-1">You Get</p>
+                <h2 id="totalGet" class="text-2xl font-bold text-emerald-500">₹0</h2>
+            </div>
+            <div class="glass p-6 rounded-3xl">
+                <p class="text-xs text-zinc-500 uppercase tracking-widest font-bold mb-1">You Give</p>
+                <h2 id="totalGive" class="text-2xl font-bold text-rose-500">₹0</h2>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mb-6">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="absolute left-4 top-3.5 w-5 h-5 text-zinc-500"></i>
+                <input id="searchInput" onkeyup="filterCustomers()" type="text" placeholder="Search customers..." 
+                    class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            </div>
+            <button onclick="toggleModal('customerModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-3.5 rounded-2xl transition-all shadow-lg shadow-emerald-900/20">
+                <i data-lucide="user-plus"></i>
+            </button>
+        </div>
+
+        <div id="customerList" class="space-y-3">
+            </div>
+    </main>
+
+    <div id="customerModal" class="fixed inset-0 z-[100] hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass w-full max-w-sm rounded-[32px] p-8 shadow-2xl">
+            <h3 class="text-xl font-bold mb-6">New Customer</h3>
+            <input id="cName" type="text" placeholder="Full Name" class="w-full bg-zinc-800 border-none rounded-2xl py-4 px-5 mb-3 focus:ring-2 focus:ring-emerald-500">
+            <input id="cPhone" type="tel" placeholder="Phone Number" class="w-full bg-zinc-800 border-none rounded-2xl py-4 px-5 mb-6 focus:ring-2 focus:ring-emerald-500">
+            <div class="flex gap-3">
+                <button onclick="toggleModal('customerModal')" class="flex-1 text-zinc-400 font-bold">Cancel</button>
+                <button onclick="addNewCustomer()" class="flex-[2] bg-white text-black py-4 rounded-2xl font-bold">Create Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ledgerModal" class="fixed inset-0 z-[100] hidden bg-black flex flex-col">
+        <header class="p-6 border-b border-zinc-800 flex justify-between items-center">
+            <div>
+                <h2 id="mName" class="text-xl font-bold">Name</h2>
+                <p id="mPhone" class="text-sm text-zinc-500"></p>
+            </div>
+            <button onclick="toggleModal('ledgerModal')" class="p-2 text-zinc-400"><i data-lucide="x"></i></button>
+        </header>
+
+        <div class="px-6 py-4 flex gap-3 border-b border-zinc-800">
+            <button onclick="sendReminder('WA')" class="flex-1 flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-500 py-3 rounded-xl border border-emerald-500/20 text-sm font-bold hover:bg-emerald-500/20 transition-all">
+                <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp
+            </button>
+            <button onclick="sendReminder('SMS')" class="flex-1 flex items-center justify-center gap-2 bg-blue-500/10 text-blue-500 py-3 rounded-xl border border-blue-500/20 text-sm font-bold hover:bg-blue-500/20 transition-all">
+                <i data-lucide="smartphone" class="w-4 h-4"></i> SMS
+            </button>
+        </div>
+
+        <div id="ledgerHistory" class="flex-1 overflow-y-auto p-6 space-y-4">
+            </div>
+
+        <footer class="p-6 glass border-t border-zinc-800 space-y-4">
+            <div class="flex gap-3">
+                <button onclick="prepTransaction('GIVE')" class="flex-1 bg-rose-500/10 text-rose-500 py-4 rounded-2xl font-bold border border-rose-500/20">Given ₹</button>
+                <button onclick="prepTransaction('REC')" class="flex-1 bg-emerald-500/10 text-emerald-500 py-4 rounded-2xl font-bold border border-emerald-500/20">Received ₹</button>
+            </div>
+            
+            <div id="transInputs" class="hidden animate-in slide-in-from-bottom-4 duration-300">
+                <input id="tAmt" type="number" placeholder="Enter Amount" class="w-full bg-zinc-800 text-2xl font-bold rounded-2xl py-4 px-5 mb-3">
+                <input id="tMsg" type="text" placeholder="Note (Optional)" class="w-full bg-zinc-800 rounded-2xl py-4 px-5 mb-4">
+                <button onclick="finalizeTransaction()" id="saveBtn" class="w-full py-5 rounded-2xl font-bold text-lg shadow-xl uppercase tracking-widest">Save Record</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        const MY_URL = "https://ekybwlhlsgqrwykxkmfe.supabase.co";
+        const MY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVreWJ3bGhsc2dxcnd5a3hrbWZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjI2NjQsImV4cCI6MjA4NzQzODY2NH0.W9KUkP_3k19L93kEEY-h95_TE_rRNYcUUBywrtEjSW0";
+        const supabaseClient = supabase.createClient(MY_URL, MY_KEY);
+
+        let activeCustId = null;
+        let activeMode = null; // 'REC' or 'GIVE'
+
+        // --- 2. INITIALIZATION ---
+        async function init() {
+            lucide.createIcons();
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) window.location.href = "index.html";
+            loadData();
+        }
+
+        async function loadData() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const { data: customers } = await supabaseClient.from('customers').select('*, transactions(amount)');
+
+            let html = "";
+            let totalGet = 0, totalGive = 0;
+
+            customers.forEach(c => {
+                const balance = c.transactions.reduce((acc, t) => acc + Number(t.amount), 0);
+                if(balance > 0) totalGet += balance; else totalGive += Math.abs(balance);
+
+                html += `
+                    <div onclick="openLedger(${c.id}, '${c.name}', '${c.phone}')" class="glass p-5 rounded-[24px] flex justify-between items-center cursor-pointer hover:border-zinc-600 transition-all">
+                        <div>
+                            <h4 class="font-bold text-lg">${c.name}</h4>
+                            <p class="text-xs text-zinc-500">${c.phone}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-zinc-500 mb-1">${balance >= 0 ? 'YOU GET' : 'YOU GIVE'}</p>
+                            <p class="font-bold text-xl ${balance >= 0 ? 'text-emerald-500' : 'text-rose-500'}">₹${Math.abs(balance)}</p>
+                        </div>
+                    </div>`;
+            });
+
+            document.getElementById('customerList').innerHTML = html || `<p class="text-center text-zinc-600 py-10">No customers found.</p>`;
+            document.getElementById('totalGet').innerText = "₹" + totalGet;
+            document.getElementById('totalGive').innerText = "₹" + totalGive;
+        }
+
+        // --- 3. CUSTOMER LOGIC ---
+        async function addNewCustomer() {
+            const name = document.getElementById('cName').value.trim();
+            const phone = document.getElementById('cPhone').value.trim();
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            if (!name || !phone) return alert("Fill all details");
+
+            const { error } = await supabaseClient.from('customers').insert([{ user_id: user.id, name, phone }]);
+            
+            if (error) alert(error.message);
+            else {
+                toggleModal('customerModal');
+                loadData();
+            }
+        }
+
+        // --- 4. TRANSACTION LOGIC ---
+        async function openLedger(id, name, phone) {
+            activeCustId = id;
+            document.getElementById('mName').innerText = name;
+            document.getElementById('mPhone').innerText = phone;
+            toggleModal('ledgerModal');
+            document.getElementById('transInputs').classList.add('hidden');
+            renderHistory(id);
+            // Refresh icons for the reminder bar
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function prepTransaction(mode) {
+            activeMode = mode;
+            const btn = document.getElementById('saveBtn');
+            const container = document.getElementById('transInputs');
+            
+            container.classList.remove('hidden');
+            btn.className = mode === 'REC' ? "w-full py-5 rounded-2xl font-bold text-lg shadow-xl bg-emerald-600 text-white" : "w-full py-5 rounded-2xl font-bold text-lg shadow-xl bg-rose-600 text-white";
+            btn.innerText = mode === 'REC' ? "Confirm Received" : "Confirm Given";
+        }
+
+        async function finalizeTransaction() {
+            const amt = document.getElementById('tAmt').value;
+            const msg = document.getElementById('tMsg').value;
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            if (!amt) return alert("Enter amount");
+
+            const finalAmount = activeMode === 'REC' ? Math.abs(amt) : -Math.abs(amt);
+
+            const { error } = await supabaseClient.from('transactions').insert([{
+                user_id: user.id,
+                customer_id: activeCustId,
+                amount: finalAmount,
+                message: msg
+            }]);
+
+            if (error) {
+                console.error("Critical Error:", error);
+                alert("Database Error: " + error.message);
+            } else {
+                document.getElementById('tAmt').value = "";
+                document.getElementById('tMsg').value = "";
+                document.getElementById('transInputs').classList.add('hidden');
+                renderHistory(activeCustId);
+                loadData();
+            }
+        }
+
+        async function renderHistory(id) {
+            const { data } = await supabaseClient.from('transactions').select('*').eq('customer_id', id).order('created_at', {ascending: false});
+            let html = "";
+            data.forEach(t => {
+                html += `
+                <div class="flex justify-between items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
+                    <div>
+                        <p class="text-sm font-semibold">${t.message || 'Payment Record'}</p>
+                        <p class="text-[10px] text-zinc-600 uppercase tracking-tighter">${new Date(t.created_at).toLocaleString()}</p>
+                    </div>
+                    <p class="font-bold ${t.amount >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+                        ${t.amount >= 0 ? '+' : '-'} ₹${Math.abs(t.amount)}
+                    </p>
+                </div>`;
+            });
+            document.getElementById('ledgerHistory').innerHTML = html || "<p class='text-zinc-600 text-center'>No entries yet.</p>";
+        }
+
+        // --- 5. REMINDER LOGIC ---
+        function sendReminder(type) {
+            const name = document.getElementById('mName').innerText;
+            const phone = document.getElementById('mPhone').innerText.replace(/\D/g, '');
+            
+            const historyDivs = document.getElementById('ledgerHistory').querySelectorAll('.font-bold');
+            let balance = 0;
+            historyDivs.forEach(div => {
+                const text = div.innerText.replace(/[^\d.-]/g, '');
+                balance += parseFloat(text);
+            });
+
+            if (!phone || phone === "0000") return alert("No valid phone number found!");
+
+            const status = balance >= 0 ? "due to me" : "advance with me";
+            const message = `Hi ${name}, this is a reminder from my Due-Khata ledger. Your current balance is ₹${Math.abs(balance)} (${status}). Please check.`;
+
+            if (type === 'WA') {
+                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+            } else {
+                window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
+            }
+        }
+
+        // --- 6. HELPERS ---
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function filterCustomers() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const customers = document.getElementById('customerList').children;
+            Array.from(customers).forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(q) ? "flex" : "none";
+            });
+        }
+        async function logout() { await supabaseClient.auth.signOut(); window.location.href = "index.html"; }
+
+
+        // --- MOBILE NAVIGATION & PERSISTENCE SHIELD ---
+
+// 1. Listen for the mobile 'Back' button
+window.onpopstate = function(event) {
+    const ledgerModal = document.getElementById('ledgerModal');
+    const customerModal = document.getElementById('customerModal');
+
+    // If Ledger is open, close it instead of exiting the app
+    if (!ledgerModal.classList.contains('hidden')) {
+        ledgerModal.classList.add('hidden');
+        // Stay on this page
+        history.pushState(null, null, window.location.pathname);
+    } 
+    // If Customer Modal is open, close it
+    else if (!customerModal.classList.contains('hidden')) {
+        customerModal.classList.add('hidden');
+        history.pushState(null, null, window.location.pathname);
+    }
+};
+
+// 2. Update the toggle function to register a "Step" in history
+// Replace your old toggleModal with this one
+function toggleModal(id) {
+    const el = document.getElementById(id);
+    const isOpening = el.classList.contains('hidden');
+    
+    el.classList.toggle('hidden');
+    
+    if (isOpening) {
+        // Create a fake history point so 'Back' has something to close
+        history.pushState({ modalOpen: true }, null, window.location.pathname);
+    }
+}
+
+// 3. Robust Session Check
+// This replaces a simple redirect with a persistent check
+async function checkAuth() {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error || !session) {
+        console.log("No session found, redirecting to login...");
+        window.location.replace("index.html");
+    }
+}
+
+// Call auth check every time the page is focused (prevents idle logout)
+window.addEventListener('focus', checkAuth);
+
+      init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Due-Khata | Secure Entrance</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="icon" type="image/png" href="./favcion.png">
+
+    <link rel="apple-touch-icon" href="./favcion.png">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Due-Khata">
+    <meta name="theme-color" content="#09090b">
+
+    <style>
+        :root { --bg: #0a0a0a; --card: #141414; --border: #2a2a2a; --text: #fff; --accent: #00ff88; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: var(--card); border: 1px solid var(--border); padding: 40px; border-radius: 24px; width: 100%; max-width: 350px; text-align: center; }
+        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid var(--border); background: #1a1a1a; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; margin-top: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-login { background: white; color: black; }
+        .btn-signup { background: transparent; color: #888; border: 1px solid #333; }
+        #status { margin-top: 15px; font-size: 0.9rem; min-height: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h1 style="margin-bottom: 5px;">Due-Khata.</h1>
+    <p style="color: #666; margin-bottom: 25px;">Personal Digital Ledger</p>
+
+    <input type="text" id="username" placeholder="Username (e.g., rahul7)">
+    <input type="password" id="password" placeholder="Password (min. 6 chars)">
+    
+    <button onclick="loginUser()" class="btn-login">Login</button>
+    <button onclick="signUpUser()" class="btn-signup">New User? Create Account</button>
+    
+    <div id="status"></div>
+</div>
+
+<script>
+    // 1. CONFIGURATION
+    const MY_URL = "https://ekybwlhlsgqrwykxkmfe.supabase.co";
+    const MY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVreWJ3bGhsc2dxcnd5a3hrbWZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjI2NjQsImV4cCI6MjA4NzQzODY2NH0.W9KUkP_3k19L93kEEY-h95_TE_rRNYcUUBywrtEjSW0";
+    
+    // Unique name to prevent "Identifier already declared" error
+    const supabaseClient = supabase.createClient(MY_URL, MY_KEY);
+
+    // 2. SIGN UP LOGIC
+    async function signUpUser() {
+        const user = document.getElementById("username").value.trim();
+        const pass = document.getElementById("password").value;
+        const status = document.getElementById("status");
+
+        if(!user || pass.length < 6) {
+            status.innerText = "Check username & password (min 6).";
+            status.style.color = "red";
+            return;
+        }
+
+        status.innerText = "Creating account...";
+        
+        // This 'data' object MUST match what your SQL Trigger looks for
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: `${user}@khata.com`,
+            password: pass,
+            options: { 
+                data: { 
+                    username: user,
+                    phone: "0000" // Prevents the 500 database error
+                } 
+            }
+        });
+
+        if (error) {
+            status.innerText = error.message;
+            status.style.color = "red";
+        } else {
+            alert("Account Created! You can now Login.");
+            status.innerText = "Account ready. Please Login.";
+            status.style.color = "#00ff88";
+        }
+    }
+
+    // 3. LOGIN LOGIC
+    async function loginUser() {
+        const user = document.getElementById("username").value.trim();
+        const pass = document.getElementById("password").value;
+        const status = document.getElementById("status");
+
+        status.innerText = "Checking credentials...";
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: `${user}@khata.com`,
+            password: pass
+        });
+
+        if (error) {
+            status.innerText = "Invalid Login Details.";
+            status.style.color = "red";
+        } else {
+            status.innerText = "Access Granted! Loading Ledger...";
+            status.style.color = "#00ff88";
+            // Store session
+            sessionStorage.setItem("isLoggedIn", "true");
+            setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
+        }
+    }
+    // --- AUTO-REDIRECT LOGIC ---
+// This prevents the "Back Button Loop" by checking for an active session
+async function checkExistingSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        // If logged in, skip the login page entirely
+        window.location.replace("dashboard.html");
+    }
+}
+
+// Run check immediately on page load
+checkExistingSession();
+
+</script>
+</body>
+</html>
